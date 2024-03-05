@@ -32,10 +32,19 @@ class CSVFile:
             )
             return None
 
+    # write a function transforming the 'transaction_date' column to datetime and delete the original column
+    def transform_date(self):
+        self.df["transaction_date"] = pd.to_datetime(self.df["transaction_date"])
+        return self.df
+
 
 csv_instance = CSVFile(
-    "reviews_202109.csv"
+    "sales_202110.csv"
 )  # 'example.csv' is the name of your CSV file within the 'data' folder
-csv_instance.load(encoding="utf-16")  # Load the data from the CSV file
+csv_instance.load(encoding="utf-8")  # Load the data from the CSV file
 df = csv_instance.get_dataframe()  # Get the DataFrame
-print(df)  # Print the DataFrame
+# print the column names
+print(df.head())
+
+# print the type of the column
+print(df.dtypes)
