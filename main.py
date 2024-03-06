@@ -11,11 +11,13 @@ class CSVFile:
         self.filepath = os.path.join("data", filename)
         self.df = None
 
-    def load(self, encoding="utf-8"):
+    def load(self, encoding="utf-8", skiprows=int):
         """Load the CSV file into a pandas DataFrame."""
         if os.path.exists(self.filepath):
             try:
-                self.df = pd.read_csv(self.filepath, encoding=encoding)
+                self.df = pd.read_csv(
+                    self.filepath, skiprows=[skiprows], encoding=encoding
+                )
             except UnicodeDecodeError as e:
                 print(f"Failed to decode using {encoding}. Trying with 'utf-8-sig'.")
                 self.df = pd.read_csv(self.filepath, encoding="utf-8-sig")
