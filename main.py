@@ -32,19 +32,32 @@ class CSVFile:
             )
             return None
 
-    # write a function transforming the 'transaction_date' column to datetime and delete the original column
-    def transform_date(self):
-        self.df["transaction_date"] = pd.to_datetime(self.df["transaction_date"])
-        return self.df
+
+# csv_instance = CSVFile(
+#     "sales_202110.csv"
+# )  # 'example.csv' is the name of your CSV file within the 'data' folder
+# csv_instance.load(encoding="utf-8")  # Load the data from the CSV file
+# df = csv_instance.get_dataframe()  # Get the DataFrame
+# # print the column names
 
 
-csv_instance = CSVFile(
-    "sales_202110.csv"
-)  # 'example.csv' is the name of your CSV file within the 'data' folder
-csv_instance.load(encoding="utf-8")  # Load the data from the CSV file
-df = csv_instance.get_dataframe()  # Get the DataFrame
-# print the column names
-print(df.head())
+# # get the column Transaction Date and convert it to datetime
+# df["Transaction Date"] = pd.to_datetime(df["Transaction Date"])
+# print(df["Transaction Date"])
 
-# print the type of the column
-print(df.dtypes)
+
+# for all csv files starting with sales_ in the data folder combine them into one dataframes
+def combine_csv_files():
+    csv_files = [file for file in os.listdir("data") if file.startswith("sales_")]
+    print(csv_files)
+    dataframes = []
+    for file in csv_files:
+        csv_instance = CSVFile(file)
+        csv_instance.load()
+        dataframes.append(csv_instance.get_dataframe())
+    combined_df = pd.concat(dataframes, ignore_index=False)
+    return combined_df
+
+
+df = combine_csv_files()
+list_of_columns = df.columns.tolist()
