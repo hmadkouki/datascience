@@ -1,14 +1,9 @@
 import pandas as pd
-import numpy as np
-import glob
-import os
-import bokeh.plotting as bp
+from bokeh.io import show, output_file
+from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
-from bokeh.plotting import figure, output_file, show
-from bokeh.io import output_notebook
-from bokeh.layouts import column
-from bokeh.models import HoverTool
-from bokeh.models import DatetimeTickFormatter
+from bokeh.layouts import gridplot
+from bokeh.models import DatetimeTickFormatter, HoverTool
 
 
 def add_column_data(existing_df, custom_df, column_name, custom_column_name):
@@ -153,36 +148,115 @@ output_file("index.html")
 source = ColumnDataSource(sales_df)
 source2 = ColumnDataSource(crashes_main)
 
-p = figure(
-    title="Sales per day",
-    x_axis_label="Date",
-    y_axis_label="Amount",
-    x_axis_type="datetime",
-)
-p.line(
-    x="Transaction_date", y="Amount", source=source, legend_label="Sales", color="blue"
-)
-p.xaxis.formatter = DatetimeTickFormatter(days="%d %b %Y")
-p.xaxis.major_label_orientation = 3.14 / 4
-p.add_tools(HoverTool(tooltips=[("Amount", "@Amount"), ("Date", "@Transaction_date")]))
+# Group by month and sum the amounts
+sales_df["Month"] = sales_df["Transaction_date"].dt.to_period("M")
+monthly_sales = sales_df.groupby("Month")["Amount"].sum().reset_index()
 
-p2 = figure(
+# Convert 'Month' to datetime to be compatible with Bokeh's datetime x-axis
+monthly_sales["Month"] = monthly_sales["Month"].dt.to_timestamp()
+
+# Update the ColumnDataSource for the sales data
+source = ColumnDataSource(monthly_sales)
+
+# Assuming sales_df is already created and preprocessed as per your previous code
+
+# Add new columns for segmentation
+sales_df["Day_of_Week"] = sales_df["Transaction_date"].dt.day_name()
+sales_df["Time_of_Day"] = sales_df[
+    "Transaction_date"
+].dt.hour  # This assumes you have time in your 'Transaction_date'
+
+# Group by SKU Id and sum the Amounts
+sku_sales_volume = sales_df.groupby("SKU_Id")["Amount"].sum().reset_index()
+day_sales_volume = sales_df.groupby("Day_of_Week")["Amount"].sum().reset_index()
+country_sales_volume = sales_df.groupby("Buyer_country")["Amount"].sum().reset_index()
+
+# Sort the 'day_sales_volume' by the day of the week
+days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+day_sales_volume["Day_of_Week"] = pd.Categorical(
+    day_sales_volume["Day_of_Week"], categories=days, ordered=True
+)
+day_sales_volume = day_sales_volume.sort_values("Day_of_Week")
+
+# Prepare the data source for Bokeh
+sku_source = ColumnDataSource(sku_sales_volume)
+day_source = ColumnDataSource(day_sales_volume)
+country_source = ColumnDataSource(country_sales_volume)
+
+# Output file
+# Begin plotting
+output_file("index.html")
+
+# Group by SKU Id and sum the Amounts
+sku_sales_volume = sales_df.groupby("SKU_Id")["Amount"].sum().reset_index()
+day_sales_volume = sales_df.groupby("Day_of_Week")["Amount"].sum().reset_index()
+country_sales_volume = sales_df.groupby("Buyer_country")["Amount"].sum().reset_index()
+
+# Sort the 'day_sales_volume' by the day of the week
+days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+day_sales_volume["Day_of_Week"] = pd.Categorical(
+    day_sales_volume["Day_of_Week"], categories=days, ordered=True
+)
+day_sales_volume = day_sales_volume.sort_values("Day_of_Week")
+
+# Prepare the data source for Bokeh
+sku_source = ColumnDataSource(sku_sales_volume)
+day_source = ColumnDataSource(day_sales_volume)
+country_source = ColumnDataSource(country_sales_volume)
+
+# Configure the bar plots
+p_sku = figure(
+    x_range=sku_sales_volume["SKU_Id"].tolist(),
+    title="Sales Volume per SKU Id",
+    x_axis_label="SKU Id",
+    y_axis_label="Sales Volume",
+    sizing_mode="scale_width",
+)
+p_sku.vbar(x="SKU_Id", top="Amount", width=0.9, source=sku_source)
+
+p_day = figure(
+    x_range=days,
+    title="Sales Volume by Day of the Week",
+    x_axis_label="Day of the Week",
+    y_axis_label="Sales Volume",
+    sizing_mode="scale_width",
+)
+p_day.vbar(x="Day_of_Week", top="Amount", width=0.9, source=day_source)
+
+p_country = figure(
+    x_range=country_sales_volume["Buyer_country"].tolist(),
+    title="Sales Volume by Buyer Country",
+    x_axis_label="Country",
+    y_axis_label="Sales Volume",
+    sizing_mode="scale_width",
+)
+p_country.vbar(x="Buyer_country", top="Amount", width=0.9, source=country_source)
+
+# Configure the line plot for crashes
+p_crashes = figure(
     title="Crashes per day",
     x_axis_label="Date",
     y_axis_label="Crashes",
     x_axis_type="datetime",
+    sizing_mode="scale_width",
 )
-p2.line(
+p_crashes.line(
     x="Date",
     y="Daily_stats_crashes",
     source=source2,
     legend_label="Crashes",
     color="red",
 )
-p2.xaxis.formatter = DatetimeTickFormatter(days="%d %b %Y")
-p2.xaxis.major_label_orientation = 3.14 / 4
-p2.add_tools(
-    HoverTool(tooltips=[("Crashes", "@Daily_stats_crashes"), ("Date", "@Date")])
+p_crashes.xaxis.formatter = DatetimeTickFormatter(days="%d %b %Y")
+p_crashes.add_tools(
+    HoverTool(
+        tooltips=[("Crashes", "@Daily_stats_crashes"), ("Date", "@Date{%F}")],
+        formatters={"@Date": "datetime"},
+    )
 )
 
-show(column(p, p2))
+# Organize the plots into a grid layout
+layout = gridplot([[p_sku, p_day], [p_country, p_crashes]], sizing_mode="scale_width")
+
+# Show the layout
+show(layout)
