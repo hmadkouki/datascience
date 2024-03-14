@@ -15,23 +15,20 @@
         flex-direction: column;
         align-items: center;
     }
-    .row {
-        width: 100%;
-        display: flex;
-    }
-    .half-width {
-        width: 50%;
-        padding: 5px;
-    }
     .widget-box {
         border: 1px solid #ccc;
         margin: 10px;
         padding: 10px;
+        width: 49%; /* Adjust the width as necessary */
         box-sizing: border-box;
+    }
+    .row {
+        width: 100%;
+        display: flex;
     }
     iframe {
         width: 100%;
-        height: 600px;
+        height: 600px; /* Set height to 600px as requested */
         border: none;
     }
     .sales-plot {
@@ -72,7 +69,7 @@
         });
         
         // Show the first plot by default and resize it
-        var firstPlot = document.getElementById('sales_volume_per_country');
+        var firstPlot = document.getElementById('sales_per_country');
         firstPlot.style.display = 'block';
         resizeIframe(firstPlot);
     });
@@ -81,28 +78,26 @@
 </head>
 <body>
     <div class="row">
-        <div class="widget-box half-width">
+        <div class="widget-box">
             <select id="sales-plot-selector">
-                <option value="sales_volume_per_country">Sales Amount by Country</option>
-                <option value="sales_per_country">Sales Volume per Country</option>
+                <option value="sales_per_country">Sales Amount by Country</option>
+                <option value="sales_volume_per_country">Sales Volume per Country</option>
                 <option value="sales_volume_per_day">Sales Volume by Day of the Week</option>
                 <option value="sales_volume_per_sku">Sales Volume per SKU ID</option>
             </select>
             <!-- Iframes for sales plots with onload event to resize -->
-            <iframe id="sales_per_country" class="sales-plot" src="sales_per_country.html" onload="resizeIframe(this)"></iframe>
             <iframe id="sales_volume_per_country" class="sales-plot" src="sales_volume_per_country.html" onload="resizeIframe(this)"></iframe>
+            <iframe id="sales_per_country" class="sales-plot" src="sales_per_country.html" onload="resizeIframe(this)"></iframe>
             <iframe id="sales_volume_per_day" class="sales-plot" src="sales_volume_per_day.html" onload="resizeIframe(this)"></iframe>
             <iframe id="sales_volume_per_sku" class="sales-plot" src="sales_volume_per_sku.html" onload="resizeIframe(this)"></iframe>
         </div>
-        <div class="widget-box half-width">
-            <iframe id="ratings_country" src="ratings_country.html" style="width:100%; height:600px; border:none;"></iframe>
-        </div>
+        <iframe id="ratings_country" src="ratings_country.html" style="width:100%; height:600px; border:none;"></iframe>
     </div>
     <div class="row">
-        <div class="widget-box half-width">
+        <div class="widget-box">
             <iframe id="crashes_per_day" src="crashes_per_day.html" onload="resizeIframe(this)"></iframe>
         </div>
-        <div class="widget-box half-width">
+        <div class="widget-box">
             <iframe id="ratings" src="ratings.html" onload="resizeIframe(this)"></iframe>
         </div>
     </div>
