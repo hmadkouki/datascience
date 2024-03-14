@@ -1,0 +1,109 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f4f4f4;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .widget-box {
+        border: 1px solid #ccc;
+        margin: 10px;
+        padding: 10px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .flex-row {
+        display: flex;
+        width: 95%; /* Adjust based on your layout */
+    }
+    .half-width {
+        width: 50%;
+        padding: 0 5px;
+    }
+    iframe {
+        width: 100%;
+        border: none;
+        height: 600px;
+    }
+    .sales-plot {
+        display: none; /* Hide all iframes initially */
+    }
+</style>
+ <!-- Using the previously defined CSS -->
+</head>
+<body>
+    <div class="widget-box">
+        <select id="sales-plot-selector">
+            <option value="sales_per_country">Sales Amount by Country</option>
+            <option value="sales_volume_per_country">Sales Volume per Country</option>
+            <option value="sales_volume_per_day">Sales Volume by Day of the Week</option>
+            <option value="sales_volume_per_sku">Sales Volume per SKU ID</option>
+        </select>
+        <!-- Iframes for sales plots with onload event to resize -->
+        <iframe id="sales_per_country" class="sales-plot" src="sales_per_country.html" onload="resizeIframe(this)"></iframe>
+        <iframe id="sales_volume_per_country" class="sales-plot" src="sales_volume_per_country.html" onload="resizeIframe(this)"></iframe>
+        <iframe id="sales_volume_per_day" class="sales-plot" src="sales_volume_per_day.html" onload="resizeIframe(this)"></iframe>
+        <iframe id="sales_volume_per_sku" class="sales-plot" src="sales_volume_per_sku.html" onload="resizeIframe(this)"></iframe>
+    </div>
+    <div class="flex-row">
+        <div class="widget-box half-width">
+            <iframe id="crashes_per_day" src="crashes_per_day.html" onload="resizeIframe(this)"></iframe>
+        </div>
+        <div class="widget-box half-width">
+            <iframe id="ratings" src="ratings.html" onload="resizeIframe(this)"></iframe>
+        </div>
+    </div>
+    <div class="widget-box">
+        Empty Widget Placeholder
+    </div>
+    
+<script>
+    // Function to resize an iframe to its content height
+    function resizeIframe(iframe) {
+        try {
+            iframe.style.height = iframe.contentDocument.body.scrollHeight + 'px';
+        } catch(e) {
+            console.log('Error resizing iframe:', e);
+        }
+    }
+    
+    // Event listener for the dropdown menu
+    window.addEventListener('load', function() {
+        // Adjust the iframes to fit the content
+        var iframes = document.getElementsByTagName('iframe');
+        for (var i = 0; i < iframes.length; i++) {
+            iframes[i].onload = function() {
+                resizeIframe(this);
+            }
+        }
+        
+        // Switch the plot based on the dropdown selection
+        document.getElementById('sales-plot-selector').addEventListener('change', function() {
+            var allPlots = document.getElementsByClassName('sales-plot');
+            for (var i = 0; i < allPlots.length; i++) {
+                allPlots[i].style.display = 'none'; // Hide all plots
+            }
+            var selectedIframe = document.getElementById(this.value);
+            selectedIframe.style.display = 'block'; // Show selected plot
+            resizeIframe(selectedIframe); // Resize the new plot
+        });
+        
+        // Show the first plot by default and resize it
+        var firstPlot = document.getElementById('sales_per_country');
+        firstPlot.style.display = 'block';
+        resizeIframe(firstPlot);
+    });
+</script>
+ <!-- Include the updated JavaScript -->
+</body>
+</html>

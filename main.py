@@ -1,9 +1,19 @@
 import pandas as pd
 from bokeh.io import show, output_file
-from bokeh.plotting import figure
+from bokeh.plotting import figure, output_file, show
 from bokeh.models import ColumnDataSource
-from bokeh.layouts import gridplot
-from bokeh.models import DatetimeTickFormatter, HoverTool
+from bokeh.layouts import gridplot, column
+from bokeh.models import (
+    DatetimeTickFormatter,
+    HoverTool,
+    GeoJSONDataSource,
+    LinearColorMapper,
+    ColorBar,
+)
+import geopandas as gpd
+from bokeh.palettes import Viridis6 as palette, brewer
+from bokeh.tile_providers import CARTODBPOSITRON
+from bokeh.tile_providers import get_provider
 
 
 def add_column_data(existing_df, custom_df, column_name, custom_column_name):
@@ -90,7 +100,7 @@ sales_df = sales_df[sales_df["Transaction_type"] != "Google fee"]
 sales_df = sales_df[sales_df["Amount"] > 0]
 
 
-##### 2nd part of the code, crashes data
+#### 2nd part of the code, crashes data
 
 list_csv_stats_crashes = [
     "stats_crashes_202106_overview.csv",
@@ -141,12 +151,106 @@ for csv_file in list_csv_stats_crashes:
     # date to datetime
     crashes_main["Date"] = pd.to_datetime(crashes_main["Date"])
 
+# 3rd part of the code ratings data
+list_csv_stats_ratings = [
+    "stats_ratings_202106_overview.csv",
+    "stats_ratings_202107_overview.csv",
+    "stats_ratings_202108_overview.csv",
+    "stats_ratings_202109_overview.csv",
+    "stats_ratings_202110_overview.csv",
+    "stats_ratings_202111_overview.csv",
+    "stats_ratings_202112_overview.csv",
+]
+
+list_csv_stats_ratings = [f"data/{csv}" for csv in list_csv_stats_ratings]
+list_columns_new_stats_ratings = [
+    "Date",
+    "Package_name",
+    "rating",
+    "Total_average_rating",
+]
+
+list_columns_old_stats_ratings = [
+    "Date",
+    "Package Name",
+    "Daily Average Rating",
+    "Total Average Rating",
+]
+
+# Define your custom DataFrame
+ratings_main = pd.DataFrame(
+    {"Date": [], "Package_name": [], "rating": [], "Total_average_rating": []}
+)
+for csv_file in list_csv_stats_ratings:
+    try:
+        df = pd.read_csv(csv_file, encoding="utf-16")  # Adjust the encoding here
+    except UnicodeDecodeError:
+        try:
+            df = pd.read_csv(
+                csv_file, encoding="iso-8859-1"
+            )  # Try a different encoding if utf-16 fails
+        except Exception as e:
+            print(f"Failed to read {csv_file} with multiple encodings: {e}")
+            continue
+
+    # Rename columns to match custom DataFrame
+    df.rename(
+        columns=dict(
+            zip(list_columns_old_stats_ratings, list_columns_new_stats_ratings)
+        ),
+        inplace=True,
+    )
+
+    # Add data from the current DataFrame to the custom DataFrame
+    ratings_main = add_column_data(df, ratings_main)
+    # date to datetime
+    ratings_main["Date"] = pd.to_datetime(ratings_main["Date"])
+
+# delete all the nan values from ratings_main
+ratings_main = ratings_main.dropna()
+
+# plot the rating and date in a bokeh plot
+# Create a new plot with a datetime axis type
+source_rating = ColumnDataSource(ratings_main)
+p = figure(
+    x_axis_type="datetime",
+    title="Rating per day",
+    x_axis_label="Date",
+    y_axis_label="Rating",
+    sizing_mode="inherit",
+)
+p.line(
+    x="Date",
+    y="rating",
+    source=source_rating,
+    legend_label="Rating",
+    color="blue",
+)
+p.line(
+    x="Date",
+    y="Total_average_rating",
+    source=source_rating,
+    legend_label="Total Average Rating",
+    color="green",
+)
+p.xaxis.formatter = DatetimeTickFormatter(days="%d %b %Y")
+p.add_tools(
+    HoverTool(
+        tooltips=[("Rating", "@rating"), ("Date", "@Date{%F}")],
+        formatters={"@Date": "datetime"},
+    )
+)
+output_file("ratings.html")
+show(p)
 
 # use bokeh to plot the sales_df dataframe data and export the plot as a html file
 # visualize the crashes data per day in the same html file
 output_file("index.html")
 source = ColumnDataSource(sales_df)
 source2 = ColumnDataSource(crashes_main)
+
+# create new df for usage with geopandas and to visualize buyers per country
+sales_df_country = sales_df.groupby("Buyer_country")["Amount"].sum().reset_index()
 
 # Group by month and sum the amounts
 sales_df["Month"] = sales_df["Transaction_date"].dt.to_period("M")
@@ -204,41 +308,53 @@ sku_source = ColumnDataSource(sku_sales_volume)
 day_source = ColumnDataSource(day_sales_volume)
 country_source = ColumnDataSource(country_sales_volume)
 
+output_file("sales_volume_per_sku.html")  # Specify unique filename here
 # Configure the bar plots
 p_sku = figure(
     x_range=sku_sales_volume["SKU_Id"].tolist(),
     title="Sales Volume per SKU Id",
     x_axis_label="SKU Id",
     y_axis_label="Sales Volume",
-    sizing_mode="scale_width",
+    sizing_mode="inherit",
 )
 p_sku.vbar(x="SKU_Id", top="Amount", width=0.9, source=sku_source)
+show(p_sku)
 
+output_file("sales_volume_per_day.html")  # Specify unique filename here
 p_day = figure(
     x_range=days,
     title="Sales Volume by Day of the Week",
     x_axis_label="Day of the Week",
     y_axis_label="Sales Volume",
-    sizing_mode="scale_width",
+    sizing_mode="inherit",
 )
 p_day.vbar(x="Day_of_Week", top="Amount", width=0.9, source=day_source)
+show(p_day)
 
+output_file("sales_volume_per_country.html")  # Specify unique filename here
+# use geopandas to plot the sales volume per country
+# Configure the bar plot for sales volume per country
 p_country = figure(
     x_range=country_sales_volume["Buyer_country"].tolist(),
-    title="Sales Volume by Buyer Country",
+    title="Sales Volume per Country",
     x_axis_label="Country",
     y_axis_label="Sales Volume",
-    sizing_mode="scale_width",
+    sizing_mode="inherit",
+    toolbar_location=None,
 )
 p_country.vbar(x="Buyer_country", top="Amount", width=0.9, source=country_source)
+p_country.xaxis.major_label_orientation = 1
+show(p_country)
+
 
 # Configure the line plot for crashes
+output_file("crashes_per_day.html")  # Specify unique filename here
 p_crashes = figure(
     title="Crashes per day",
     x_axis_label="Date",
     y_axis_label="Crashes",
     x_axis_type="datetime",
-    sizing_mode="scale_width",
+    sizing_mode="inherit",
 )
 p_crashes.line(
     x="Date",
@@ -254,9 +370,72 @@ p_crashes.add_tools(
         formatters={"@Date": "datetime"},
     )
 )
+show(p_crashes)
 
-# Organize the plots into a grid layout
-layout = gridplot([[p_sku, p_day], [p_country, p_crashes]], sizing_mode="scale_width")
 
-# Show the layout
-show(layout)
+# Load a GeoDataFrame with world data
+world = gpd.read_file("shapefile/ne_110m_admin_0_countries.shp")
+
+# use geopandas to plot the sales volume per country
+# Merge the GeoDataFrame with the sales volume per country
+# Load a GeoDataFrame with world data (make sure to have the 'naturalearth_lowres' dataset downloaded)
+world = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
+
+# Merge the GeoDataFrame with the DataFrame on the 'iso_a3' column, which contains the country codes
+merged = world.merge(
+    sales_df_country, how="left", left_on="iso_a3", right_on="Buyer_country"
+)
+merged["Amount"] = merged["Amount"].fillna(
+    0
+)  # Replace NaN with 0 for countries with no data
+
+# Convert to GeoJSON format for Bokeh
+geo_source = GeoJSONDataSource(geojson=merged.to_json())
+
+# Define color mapper - this will map the 'Amount' values to colors
+mapper = LinearColorMapper(
+    palette=brewer["YlGnBu"][8],
+    low=merged["Amount"].min(),
+    high=merged["Amount"].max(),
+    nan_color="#d9d9d9",
+)
+
+# Define color bar
+color_bar = ColorBar(
+    color_mapper=mapper,
+    label_standoff=8,
+    width=500,
+    height=20,
+    border_line_color=None,
+    location=(0, 0),
+    orientation="horizontal",
+)
+
+# Create figure
+p = figure(
+    title="Sales Amount by Country",
+    x_axis_location=None,
+    y_axis_location=None,
+    tooltips=[("Country", "@iso_a3"), ("Amount", "@Amount")],
+)
+
+p.grid.grid_line_color = None
+p.hover.point_policy = "follow_mouse"
+
+# Add patch renderer to figure
+p.patches(
+    "xs",
+    "ys",
+    source=geo_source,
+    fill_color={"field": "Amount", "transform": mapper},
+    line_color="black",
+    line_width=0.25,
+    fill_alpha=1,
+)
+
+# Add the color bar to the figure
+p.add_layout(color_bar, "below")
+
+# Output to HTML
+output_file("sales_per_country.html")
+show(column(p))
