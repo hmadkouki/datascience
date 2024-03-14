@@ -153,33 +153,41 @@ for csv_file in list_csv_stats_crashes:
 
 # 3rd part of the code ratings data
 list_csv_stats_ratings = [
-    "stats_ratings_202106_overview.csv",
-    "stats_ratings_202107_overview.csv",
-    "stats_ratings_202108_overview.csv",
-    "stats_ratings_202109_overview.csv",
-    "stats_ratings_202110_overview.csv",
-    "stats_ratings_202111_overview.csv",
-    "stats_ratings_202112_overview.csv",
+    "stats_ratings_202106_country.csv",
+    "stats_ratings_202107_country.csv",
+    "stats_ratings_202108_country.csv",
+    "stats_ratings_202109_country.csv",
+    "stats_ratings_202110_country.csv",
+    "stats_ratings_202111_country.csv",
+    "stats_ratings_202112_country.csv",
 ]
 
 list_csv_stats_ratings = [f"data/{csv}" for csv in list_csv_stats_ratings]
 list_columns_new_stats_ratings = [
     "Date",
     "Package_name",
-    "rating",
+    "Country",
+    "Daily_average_rating",
     "Total_average_rating",
 ]
 
 list_columns_old_stats_ratings = [
     "Date",
     "Package Name",
+    "Country",
     "Daily Average Rating",
     "Total Average Rating",
 ]
 
 # Define your custom DataFrame
 ratings_main = pd.DataFrame(
-    {"Date": [], "Package_name": [], "rating": [], "Total_average_rating": []}
+    {
+        "Date": [],
+        "Package_name": [],
+        "Country": [],
+        "Daily_average_rating": [],
+        "Total_average_rating": [],
+    }
 )
 for csv_file in list_csv_stats_ratings:
     try:
@@ -208,6 +216,26 @@ for csv_file in list_csv_stats_ratings:
 
 # delete all the nan values from ratings_main
 ratings_main = ratings_main.dropna()
+# create a ratings dataframe grouped by country
+ratings_country = (
+    ratings_main.groupby("Country")["Daily_average_rating"].mean().reset_index()
+)
+
+# create a barcahrt with the ratings per country export to html
+output_file("ratings_country.html")
+source = ColumnDataSource(ratings_country)
+p = figure(
+    x_range=ratings_country["Country"].tolist(),
+    title="Average rating per country",
+    x_axis_label="Country",
+    y_axis_label="Average rating",
+    sizing_mode="inherit",
+    toolbar_location=None,
+)
+p.vbar(x="Country", top="Daily_average_rating", width=0.9, source=source)
+p.xaxis.major_label_orientation = 1
+show(p)
+
 
 # plot the rating and date in a bokeh plot
 # Create a new plot with a datetime axis type
@@ -221,7 +249,7 @@ p = figure(
 )
 p.line(
     x="Date",
-    y="rating",
+    y="Daily_average_rating",
     source=source_rating,
     legend_label="Rating",
     color="blue",
