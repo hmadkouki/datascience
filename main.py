@@ -297,9 +297,13 @@ sales_df["Day_of_Week"] = sales_df["Transaction_date"].dt.day_name()
 sales_df["Time_of_Day"] = sales_df[
     "Transaction_date"
 ].dt.hour  # This assumes you have time in your 'Transaction_date'
-
+# filter on rows where sku_id is premium or unlockcharactermanager
+sales_df = sales_df[
+    (sales_df["SKU_Id"] == "premium") | (sales_df["SKU_Id"] == "unlockcharactermanager")
+]
 # Group by SKU Id and sum the Amounts
 sku_sales_volume = sales_df.groupby("SKU_Id")["Amount"].sum().reset_index()
+
 day_sales_volume = sales_df.groupby("Day_of_Week")["Amount"].sum().reset_index()
 country_sales_volume = sales_df.groupby("Buyer_country")["Amount"].sum().reset_index()
 
